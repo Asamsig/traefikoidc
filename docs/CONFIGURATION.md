@@ -59,6 +59,7 @@ spec:
 | `oidcEndSessionURL` | string | auto-discovered | Provider's end session endpoint |
 | `enablePKCE` | bool | `false` | Enable PKCE for authorization code flow |
 | `minimalHeaders` | bool | `false` | Reduce forwarded headers |
+| `authorizationParams` | map[string]string | none | Extra parameters for authorization URL |
 
 ### TLS Termination at Load Balancer
 
@@ -377,6 +378,38 @@ scopes:
   - custom_scope
 # Result: ["openid", "profile", "custom_scope"]
 ```
+
+---
+
+## Authorization Parameters
+
+Pass extra parameters to the OIDC authorization request using `authorizationParams`. Common use cases include MFA enforcement, login hints, and UI customization.
+
+| Parameter | Description |
+|-----------|-------------|
+| `acr_values` | Authentication context (e.g., `urn:mfa` for MFA) |
+| `login_hint` | Pre-fill username/email |
+| `prompt` | Control auth experience (`login`, `consent`, `select_account`) |
+| `ui_locales` | Preferred language for login UI |
+| `max_age` | Maximum authentication age in seconds |
+
+### Example: Enforce MFA
+
+```yaml
+authorizationParams:
+  acr_values: "urn:mfa"
+```
+
+### Example: Pre-fill Email and Force Login
+
+```yaml
+authorizationParams:
+  login_hint: "user@company.com"
+  prompt: "login"
+  ui_locales: "en"
+```
+
+**Note:** Reserved OIDC parameters (`client_id`, `response_type`, `redirect_uri`, `state`, `nonce`, `scope`, `code_challenge`, `audience`) cannot be overridden.
 
 ---
 

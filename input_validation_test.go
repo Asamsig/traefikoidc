@@ -5,6 +5,50 @@ import (
 	"testing"
 )
 
+// TestConfigValidateAuthorizationParams tests validation of AuthorizationParams
+func TestConfigValidateAuthorizationParams(t *testing.T) {
+	createValidConfig := func() *Config {
+		return &Config{
+			ProviderURL:          "https://provider.example.com",
+			CallbackURL:          "/callback",
+			ClientID:             "test-client-id",
+			ClientSecret:         "test-client-secret-12345678901234",
+			SessionEncryptionKey: "0123456789abcdef0123456789abcdef",
+			RateLimit:            100,
+		}
+	}
+
+	t.Run("valid params", func(t *testing.T) {
+		config := createValidConfig()
+		config.AuthorizationParams = map[string]string{
+			"acr_values": "urn:mfa",
+			"login_hint": "user@example.com",
+		}
+		if err := config.Validate(); err != nil {
+			t.Errorf("Expected valid config, got: %v", err)
+		}
+	})
+
+	t.Run("reserved params rejected", func(t *testing.T) {
+		reserved := []string{"client_id", "response_type", "redirect_uri", "state", "nonce", "scope", "code_challenge", "audience"}
+		for _, param := range reserved {
+			config := createValidConfig()
+			config.AuthorizationParams = map[string]string{param: "value"}
+			if err := config.Validate(); err == nil {
+				t.Errorf("Expected error for reserved param %s", param)
+			}
+		}
+	})
+
+	t.Run("invalid characters rejected", func(t *testing.T) {
+		config := createValidConfig()
+		config.AuthorizationParams = map[string]string{"key\nwith_newline": "value"}
+		if err := config.Validate(); err == nil || !strings.Contains(err.Error(), "invalid characters") {
+			t.Error("Expected invalid characters error")
+		}
+	})
+}
+
 func TestInputValidator(t *testing.T) {
 	config := DefaultInputValidationConfig()
 	logger := NewLogger("debug")

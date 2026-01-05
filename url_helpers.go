@@ -146,6 +146,11 @@ func (t *TraefikOidc) buildAuthURL(redirectURL, state, nonce, codeChallenge stri
 		t.logger.Debugf("TraefikOidc.buildAuthURL: Final scope string being sent to OIDC provider: %s", finalScopeString)
 	}
 
+	// Add authorization params
+	for key, value := range t.authorizationParams {
+		params.Set(key, value)
+	}
+
 	// Read authURL with RLock
 	t.metadataMu.RLock()
 	authURL := t.authURL

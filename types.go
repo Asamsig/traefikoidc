@@ -123,6 +123,7 @@ type TraefikOidc struct {
 	frontchannelLogoutPath     string
 	scopesSupported            []string
 	scopes                     []string
+	authorizationParams        map[string]string
 	refreshGracePeriod         time.Duration
 	metadataMu                 sync.RWMutex
 	shutdownOnce               sync.Once

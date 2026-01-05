@@ -69,6 +69,7 @@ type Config struct {
 	EnableFrontchannelLogout  bool                             `json:"enableFrontchannelLogout,omitempty"`
 	BackchannelLogoutURL      string                           `json:"backchannelLogoutURL,omitempty"`
 	FrontchannelLogoutURL     string                           `json:"frontchannelLogoutURL,omitempty"`
+	AuthorizationParams       map[string]string                `json:"authorizationParams,omitempty"`
 }
 
 // RedisConfig configures Redis cache backend settings for distributed caching.
@@ -355,6 +356,33 @@ func (c *Config) Validate() error {
 	if c.Redis != nil && c.Redis.Enabled {
 		if err := c.Redis.Validate(); err != nil {
 			return fmt.Errorf("redis configuration error: %w", err)
+		}
+	}
+
+	// Validate authorization params - prevent overwriting core OIDC parameters
+	if len(c.AuthorizationParams) > 0 {
+		reservedParams := map[string]bool{
+			"client_id":             true,
+			"response_type":         true,
+			"redirect_uri":          true,
+			"state":                 true,
+			"nonce":                 true,
+			"scope":                 true,
+			"code_challenge":        true,
+			"code_challenge_method": true,
+			"audience":              true,
+		}
+		for key := range c.AuthorizationParams {
+			if reservedParams[key] {
+				return fmt.Errorf("authorizationParams cannot override reserved OIDC parameter: %s", key)
+			}
+			// Validate that keys and values don't contain obvious injection patterns
+			if strings.ContainsAny(key, "\n\r\t\x00") {
+				return fmt.Errorf("authorizationParams key contains invalid characters: %s", key)
+			}
+			if strings.ContainsAny(c.AuthorizationParams[key], "\n\r\t\x00") {
+				return fmt.Errorf("authorizationParams value for '%s' contains invalid characters", key)
+			}
 		}
 	}
 

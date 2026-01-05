@@ -554,3 +554,44 @@ func TestForceHTTPSIntegration(t *testing.T) {
 			"should use https from X-Forwarded-Proto when forceHTTPS is false")
 	})
 }
+
+// TestBuildAuthURLAuthorizationParams tests authorization parameters handling
+func TestBuildAuthURLAuthorizationParams(t *testing.T) {
+	t.Run("params added to auth URL", func(t *testing.T) {
+		middleware := createMinimalMiddleware()
+		middleware.authorizationParams = map[string]string{
+			"acr_values": "urn:mfa",
+			"login_hint": "user@example.com",
+			"prompt":     "consent",
+		}
+
+		authURL := middleware.buildAuthURL("https://app.com/callback", "state123", "nonce456", "")
+
+		assert.Contains(t, authURL, "acr_values=urn%3Amfa")
+		assert.Contains(t, authURL, "login_hint=user%40example.com")
+		assert.Contains(t, authURL, "prompt=consent")
+	})
+
+	t.Run("nil params handled", func(t *testing.T) {
+		middleware := createMinimalMiddleware()
+		middleware.authorizationParams = nil
+
+		authURL := middleware.buildAuthURL("https://app.com/callback", "state123", "nonce456", "")
+
+		assert.Contains(t, authURL, "client_id=")
+		assert.Contains(t, authURL, "response_type=code")
+	})
+
+	t.Run("works with PKCE and audience", func(t *testing.T) {
+		middleware := createMinimalMiddleware()
+		middleware.enablePKCE = true
+		middleware.audience = "https://api.example.com"
+		middleware.authorizationParams = map[string]string{"acr_values": "urn:mfa"}
+
+		authURL := middleware.buildAuthURL("https://app.com/callback", "state123", "nonce456", "challenge789")
+
+		assert.Contains(t, authURL, "code_challenge=challenge789")
+		assert.Contains(t, authURL, "audience=")
+		assert.Contains(t, authURL, "acr_values=")
+	})
+}
